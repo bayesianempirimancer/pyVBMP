@@ -4,7 +4,7 @@
 # is (dims(i),1,...,1).  This choice takes advantage of broadcasting semantics with little effort.  
 
 import torch
-from Dirichlet_Tensor import Dirichlet_Tensor
+from .Dirichlet_Tensor import Dirichlet_Tensor
 
 class Hierarchical_Dirichlet():
     def __init__(self,dims,batch_shape=(),alpha_0=torch.tensor(0.5)):
