@@ -8,9 +8,8 @@ class NLRegression_Multinomial():
     # Generative model of NL regression.  Generative model is:
     #  z_t ~ MNRL(x_t)
     #  y_t|z_t,x_t ~ MatrixNormalWishart
-    print("NLRegression has no forward/backward methods, Use dMixtureofLinearTransofrorms instead")
     def __init__(self,n,p,mixture_dim,batch_shape=()):
-
+        print("NLRegression_Multinomial has no forward/backward methods, Use dMixtureofLinearTransofrorms instead")
         self.batch_shape = batch_shape
         self.batch_dim = len(batch_shape)
         self.event_dim = 2
