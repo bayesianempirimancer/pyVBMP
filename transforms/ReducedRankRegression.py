@@ -18,10 +18,9 @@ import dists.MultivariateNormal_vector_format as MultivariateNormal_vector_forma
 import dists.MVN_ard as MVN_ard
 import dists.Delta as Delta
 
-print('Reduced Rank Regression:  need option to marginalize over U instead of using VB for prediction')
-
 class ReducedRankRegression():
     def __init__(self,n,p,dim,batch_shape = (),pad_X=False,independent = False):
+        print('Reduced Rank Regression:  need option to marginalize over U instead of using VB for prediction')
         self.n=n
         self.p=p
         self.dim=dim
