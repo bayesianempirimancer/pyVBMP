@@ -1,13 +1,13 @@
 import torch
 
 class MultivariateNormal_vector_format():
-    def __init__(self,mu=None,Sigma=None,invSigmamu=None,invSigma=None,Residual=None):
+    def __init__(self,mu=None,Sigma=None,invSigmamu=None,invSigma=None,logdetinvSigma=None):
 
         self.mu = mu
         self.Sigma = Sigma
         self.invSigmamu = invSigmamu
         self.invSigma = invSigma
-        self.Residual = Residual
+        self.logdetinvSigma = logdetinvSigma
 
         self.event_dim = 2  # This is because we assue that this is a distribution over vectors that are dim x 1 matrices
         if self.mu is not None:
@@ -43,6 +43,7 @@ class MultivariateNormal_vector_format():
         self.invSigmamu = SEx*lr + self.invSigmamu*(1-lr)
         self.Sigma = None
         self.mu = None        
+        self.logdetinvSigma = None
 
     def unsqueeze(self,dim):  # only appliles to batch
         assert(dim + self.event_dim < 0)
@@ -66,12 +67,14 @@ class MultivariateNormal_vector_format():
         self.invSigmamu = self.EinvSigmamu()+other.EinvSigmamu()
         self.Sigma = None
         self.mu = None
+        self.logdetinvSigma = None
 
     def nat_combiner(self,invSigma,invSigmamu):
         self.invSigma = self.EinvSigma()+invSigma
         self.invSigmamu = self.EinvSigmamu()+invSigmamu
         self.Sigma = None
         self.mu = None
+        self.logdetinvSigma = None
 
     def mean(self):
         if self.mu is None:
@@ -99,10 +102,9 @@ class MultivariateNormal_vector_format():
         return self.Residual
 
     def ElogdetinvSigma(self):
-        if self.Sigma is None:
-            return self.invSigma.logdet()
-        else:
-            return -self.Sigma.logdet()
+        if self.logdetinvSigma is None:
+            self.logdetinvSigma = self.EinvSigma().logdet()
+        return self.logdetinvSigma
 
     def EX(self):
         return self.mean()

@@ -1,12 +1,13 @@
-# Variational Bayesian Expectation Maximization for linear regression and mixtures of linear models
-# with Gaussian observations 
-
 import torch
 from .DiagonalWishart import DiagonalWishart
 
 class DiagonalWishart_UnitTrace(DiagonalWishart):
     # Despite the name this enforces a trace constraint of TR(EinvSigma)=D where D is the dimension of the matrix
-    # so that the average eigenvalue of EinvSigma is 1.
+    # so that the average of the eigenvalues of EinvSigma is 1.  This is accomplished through the use of Lagrange 
+    # multipliers to impose the constraint that the sum of the eigenvalues of EinvSigma is D.  Since the diagonal
+    # Wishart is diagonal with entries given by a gamma distribution this is the equivalent of adding a TBD constant
+    # to the beta parameter of the gamma distribution.  Fortunately this constant can be found quickly via Newton's 
+    # Method placed into the ss_update method.  
 
     def suminv_d_plus_x(self,x):
         return (self.gamma.alpha/(self.gamma.beta+x)).sum(-1,True)

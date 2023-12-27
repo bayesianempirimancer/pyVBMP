@@ -46,15 +46,16 @@ class Hierarchical_Transition():
             NA = X.sum(sample_dims)
         else:
             # assumes X is batch consistent
-            pv = p.view(p.shape + (1,)*self.event_dim)
-            NA = (X*pv).sum(sample_dims)
+            p = p.view(p.shape + (1,)*self.event_dim)
+            NA = (X*p).sum(sample_dims)
         self.ss_update(NA,lr,beta)
 
     def update(self,X,p=None,lr=1.0,beta=None):
         self.raw_update(X,p,lr,beta)
 
     def marginal(self,idx):
-        raise NotImplementedError
+        sum_list = [x for x in list(range(-self.event_dim,0)) if x not in (idx,)]
+        return self.mean().sum(sum_list,True)
     
     def mean(self):
         p = self.dists[0].mean()

@@ -28,15 +28,14 @@ class Dirichlet():
         self.alpha = lr*(self.NA + self.alpha_0) + (1-lr)*self.alpha
 
     def raw_update(self,X,p=None,lr=1.0,beta=None):
+        sample_dim = X.ndim - self.event_dim - self.batch_dim
         if p is None: 
             # assumes X is sample x batch x event
-            NA = X
+            NA = X.sum(list(range(sample_dim)))
         else:
             # assumes X is batch consistent
             p = p.view(p.shape + (1,)*self.event_dim)
-            NA = (X*p).sum(0)
-        while NA.ndim > self.event_dim + self.batch_dim:
-            NA = NA.sum(0)
+            NA = (X*p).sum(list(range(sample_dim)))
         self.ss_update(NA,lr,beta)
 
     def update(self,X,p=None,lr=1.0,beta=None):

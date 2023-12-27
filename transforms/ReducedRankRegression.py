@@ -18,6 +18,7 @@ import dists.MultivariateNormal_vector_format as MultivariateNormal_vector_forma
 import dists.MVN_ard as MVN_ard
 import dists.Delta as Delta
 
+
 class ReducedRankRegression():
     def __init__(self,n,p,dim,batch_shape = (),pad_X=False,independent = False):
         print('Reduced Rank Regression:  need option to marginalize over U instead of using VB for prediction')
@@ -59,7 +60,7 @@ class ReducedRankRegression():
             Residual = Residual - Residual_u 
 
             self.logZ = Residual.sum(0)
-            pu = MultivariateNormal_vector_format(mu=mu,Sigma=Sigma,invSigma=invSigma,invSigmamu=invSigmamu,Residual=Residual_u)
+            pu = MultivariateNormal_vector_format(mu=mu,Sigma=Sigma,invSigma=invSigma,invSigmamu=invSigmamu)
             self.pu = pu
             if verbose is True:
                 self.ELBO_last = ELBO

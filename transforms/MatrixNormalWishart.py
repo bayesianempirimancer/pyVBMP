@@ -300,27 +300,57 @@ class MatrixNormalWishart():
             invSigmamu = self.EinvUX()[...,:,:-1]@pX.mean()
         return MultivariateNormal_vector_format(invSigma = invSigma, invSigmamu = invSigmamu)
 
-    def forward(self,pX):
+    def forward(self,pX):  # one p x p inverse and a logdet.  Assumes pX is Multivariate Normal (collapsed VB)
+        if self.pad_X is False:
+            Sigma_star = (self.n*self.V + pX.EinvSigma()).inverse()
+            invSigmamu_star = pX.EinvSigmamu()
+            mu_star = Sigma_star@pX.EinvSigmamu()
+
+            mu_y = self.mean()@mu_star
+            Sigma_yy = self.mean()@Sigma_star@self.mean().mT+self.invEinvSigma()        
+
+            Res = -0.5*(pX.mean().mT@pX.EinvSigma()@pX.mean()).squeeze(-1).squeeze(-1)
+            Res = Res + 0.5*(invSigmamu_star.mT@Sigma_star@invSigmamu_star).squeeze(-1).squeeze(-1)
+            Res = Res - 0.5*(self.n*self.V@pX.ESigma()+torch.eye(self.p,requires_grad=False)).logdet()      # includes pX.ElogdetinvSigma()  
+        else:
+            Sigma_star = (pX.EinvSigma() + self.n*self.V[...,:-1,:-1]).inverse()
+            invSigmamu_star = (pX.EinvSigmamu()-self.n*self.V[...,:-1,-1:])
+            mu_star = Sigma_star@invSigmamu_star
+
+            mu_y = self.mean()[...,:-1]@mu_star + self.mean()[...,-1:]
+            Sigma_yy = self.mean()[...,:-1]@Sigma_star@self.mean()[...,:-1].mT+self.invEinvSigma()        
+
+            Res = -0.5*(pX.mean().mT@pX.EinvSigma()@pX.mean()).squeeze(-1).squeeze(-1)
+            Res = Res + 0.5*(invSigmamu_star.mT@Sigma_star@invSigmamu_star).squeeze(-1).squeeze(-1)
+            Res = Res - 0.5*self.n*self.V[...,-1,-1]
+            Res = Res - 0.5*(self.n*self.V[...,:-1,:-1]@pX.ESigma()+torch.eye(self.p-1,requires_grad=False)).logdet()      # includes pX.ElogdetinvSigma()  
+
+        return MultivariateNormal_vector_format(mu = mu_y, Sigma = Sigma_yy), Res
+
+    def forward_old(self,pX):
+        # forward routine that operates on natural parameters
         if self.pad_X:
             PJ_y_y = self.EinvSigma()
             PJ_y_x = -self.EinvUX()[...,:,:-1]
             PJ_x_x = self.EXTinvUX()[...,:-1,:-1] + pX.EinvSigma()
             PmuJ_y = self.EinvUX()[...,:,-1:]
             PmuJ_x = pX.EinvSigmamu()-self.EXTinvUX()[...,:-1,-1:]
-#            PJ11 = self.EXTinvUX()[...,-1,-1]
+            PJ11 = self.EXTinvUX()[...,-1,-1]
         else:
             PJ_y_y = self.EinvSigma()
             PJ_y_x = -self.EinvUX()
             PJ_x_x = self.EXTinvUX() + pX.EinvSigma()
             PmuJ_y = torch.zeros(PJ_y_y.shape[:-1]+(1,))
             PmuJ_x = pX.EinvSigmamu()
-#            PJ11 = torch.tensor(0.0)
+            PJ11 = torch.tensor(0.0)
 
         invSigma_y_y, negBinvD = matrix_utils.block_precision_marginalizer(PJ_y_y, PJ_y_x, PJ_y_x.transpose(-2,-1), PJ_x_x)[0:2]
         invSigmamu_y = PmuJ_y + negBinvD@PmuJ_x
-        return MultivariateNormal_vector_format(invSigma = invSigma_y_y, invSigmamu = invSigmamu_y)
+        Res = 'Not implemented'
+        return MultivariateNormal_vector_format(invSigma = invSigma_y_y, invSigmamu = invSigmamu_y), Res
 
-    def backward(self,pY):  
+    def backward(self,pY,Res=0.0):  
+        # requires both pY.Sigma and pY.invSigma so +1 inverse
         if self.pad_X:
             PJ_y_y = pY.EinvSigma() + self.EinvSigma()
             PJ_y_x = -self.EinvUX()[...,:,:-1]
@@ -341,7 +371,7 @@ class MatrixNormalWishart():
         invSigmamu_x = PmuJ_x + negCinvA@PmuJ_y
 
         pX = MultivariateNormal_vector_format(invSigma = invSigma_x_x, invSigmamu = invSigmamu_x)
-        Res = pY.Res() + 0.5*(invSigmamu_y.transpose(-2,-1)@invSigma_y_y.inverse()@invSigmamu_y).squeeze(-1).squeeze(-1) - 0.5*invSigma_y_y.logdet() + 0.5*pY.dim*self.log2pi + 0.5*self.ElogdetinvSigma() - 0.5*PJ11
+        Res = Res + pY.Res() + 0.5*(invSigmamu_y.transpose(-2,-1)@invSigma_y_y.inverse()@invSigmamu_y).squeeze(-1).squeeze(-1) - 0.5*invSigma_y_y.logdet() + 0.5*pY.dim*self.log2pi + 0.5*self.ElogdetinvSigma() - 0.5*PJ11
         return pX, Res - pX.Res()
 
     def Ebackward(self,pY):
@@ -358,6 +388,11 @@ class MatrixNormalWishart():
         Res = Res.squeeze(-1).squeeze(-1) + 0.5*self.ElogdetinvSigma() - 0.5*self.n*self.log2pi
         pY = MultivariateNormal_vector_format(invSigma = self.EinvSigma(), invSigmamu = invSigmamu_y)
         return pY, Res-pY.Res()
+    
+    def postdict(self,Y):
+        invSigma_x_x, invSigmamu_x, Residual = self.Elog_like_X(Y)
+        pX = MultivariateNormal_vector_format(invSigma = invSigma_x_x, invSigmamu = invSigmamu_x)
+        return pX, Residual - pX.Res()
 
     def predict_given_pX(self,pX):
         return self.forward(pX)
@@ -420,11 +455,17 @@ class MatrixNormalWishart():
     def ElogdetinvU(self):
         return self.invU.ElogdetinvSigma()
 
+    def logdetEinvSigma(self):
+        return self.invU.logdetEinvSigma()
+
     def ElogdetinvSigma(self):
         return self.invU.ElogdetinvSigma()
-
+    
     def EinvSigma(self):  
         return self.invU.EinvSigma()
+    
+    def invEinvSigma(self):
+        return self.invU.invEinvSigma()
 
     def ESigma(self):  
         return self.invU.ESigma()

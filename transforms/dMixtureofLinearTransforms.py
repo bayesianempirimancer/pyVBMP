@@ -132,8 +132,8 @@ class dMixtureofLinearTransforms():
         return MultivariateNormal_vector_format(Sigma = Sigma, mu = mu)
 
     def forward_mix(self,pX):
-        return self.A.forward(pX.unsqueeze(-3)), self.pi.forward(pX)        
-
+        return self.A.forward(pX.unsqueeze(-3)), self.pi.forward(pX)     
+    
     def backward(self,pY):
         pX, ResA = self.A.backward(pY.unsqueeze(-3))
         pX, Res = self.pi.backward(torch.eye(self.mix_dim),pX)

@@ -19,13 +19,13 @@ x=torch.tensor(x,requires_grad=False).float()
 y=y.unsqueeze(-1)
 x=x.unsqueeze(-1)
 
-T = 100
 data = torch.cat((y,x),dim=-1)
-data = data[::9]
+data = data[::10]
+#data = data.reshape(200,10,200,2)
+data = data/data.std()
 v_data = torch.diff(data,dim=0)
 v_data = v_data/v_data.std()
 data = data[1:]
-data = data/data.std()
 
 data = torch.cat((data,v_data),dim=-1)
 del v_data
@@ -49,10 +49,12 @@ data = data.unsqueeze(1).clone().detach()
 # len_v_model = v_model
 
 print('Initializing X + V model....')
-model = DMBD(obs_shape=data.shape[-2:],role_dims=(0,1,0),hidden_dims=(12,4,0),regression_dim = 0, control_dim = 0, number_of_objects=11)
-
+model = DMBD(obs_shape=data.shape[-2:],role_dims=(0,1,0),hidden_dims=(8,4,2),regression_dim = -1, control_dim = 0, number_of_objects=10)
+model.obs_model.ptemp = 5.0
+model.update(data,None,None,iters=10,latent_iters=1,lr=0.5,verbose=True)
 print('Updating model X+V....')
-model.update(data,None,None,iters=40,latent_iters=1,lr=0.5,verbose=True)
+model.obs_model.ptemp = 1.0
+model.update(data,None,None,iters=20,latent_iters=1,lr=0.5,verbose=True)
 #model.px = None
 #model.update(data,None,None,iters=50,latent_iters=1,lr=1.0,verbose=True)
 #model.update(data,None,None,iters=10,latent_iters=1,lr=1)

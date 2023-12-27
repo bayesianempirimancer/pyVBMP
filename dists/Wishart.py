@@ -76,8 +76,14 @@ class Wishart():
     def EinvSigma(self):
         return self.U*self.nu.view(self.nu.shape + (1,1))
 
+    def invEinvSigma(self):
+        return self.invU/(self.nu.view(self.nu.shape + (1,1)))
+
     def ElogdetinvSigma(self):
         return self.dim*torch.log(torch.tensor(2,requires_grad=False)) - self.logdet_invU + self.log_mvdigamma(self.nu/2.0)
+
+    def logdetEinvSigma(self):
+        return -self.logdet_invU + self.nu.log()
 
     def KLqprior(self):
         out = self.nu_0/2.0*(self.logdet_invU-self.logdet_invU_0) + self.nu/2.0*(self.invU_0*self.U).sum(-1).sum(-1) - self.nu*self.dim/2.0

@@ -4,8 +4,9 @@ from .Tensor_HMM import Tensor_HMM
 import dists.NormalInverseWishart as NormalInverseWishart
 
 class Factorial_HMM(Tensor_HMM):
-    def __init__(self, num_factors, factor_shape, event_shape=(), batch_shape = ()):
-        obs_dist = NormalInverseWishart(event_shape = event_shape, batch_shape = batch_shape + num_factors*factor_shape)
+    def __init__(self, num_factors, factor_shape, event_shape, batch_shape = ()):
+        print('Factorial HMM:  needs testing')
+        obs_dist = NormalInverseWishart(event_shape, batch_shape = batch_shape + num_factors*factor_shape)
         self.num_factors = num_factors
         self.factor_shape = factor_shape
         alpha = 0.0
@@ -18,7 +19,6 @@ class Factorial_HMM(Tensor_HMM):
 
         alpha = alpha/alpha.max()*2
         prior_parms = {'alpha': alpha}
-
         super().__init__(obs_dist, event_shape = num_factors*factor_shape, prior_parms = prior_parms)
 
     def factorize_transition_probabilities(self):

@@ -10,6 +10,7 @@ class NLRegression_Multinomial():
     #  y_t|z_t,x_t ~ MatrixNormalWishart
     def __init__(self,n,p,mixture_dim,batch_shape=()):
         print("NLRegression_Multinomial has no forward/backward methods, Use dMixtureofLinearTransofrorms instead")
+
         self.batch_shape = batch_shape
         self.batch_dim = len(batch_shape)
         self.event_dim = 2

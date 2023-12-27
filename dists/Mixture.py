@@ -37,15 +37,12 @@ class Mixture():
 
     def update_assignments(self,X):
             log_p = self.Elog_like(X)
-            shift = log_p.max(-1,True)[0]
             logZ = self.stable_logsumexp(log_p,dim = list(range(-self.event_dim,0)),keepdim=False)
             log_p = log_p - logZ.view(logZ.shape + self.event_dim*(1,))
             self.p = log_p.exp()
-            self.NA = self.p.sum(0)
-            self.logZ = logZ.sum(0)
-            while self.NA.ndim > self.event_dim + self.batch_dim:
-                self.logZ = self.logZ.sum(0)
-                self.NA = self.NA.sum(0)
+            sample_dim = self.p.ndim - self.batch_dim - self.event_dim
+            self.NA = self.p.sum(list(range(sample_dim)))
+            self.logZ = logZ.sum(list(range(sample_dim)))
 
     def update_parms(self,X,lr=1.0):
         self.pi.ss_update(self.NA,lr=lr)
@@ -65,8 +62,8 @@ class Mixture():
             self.ELBO_last = ELBO
 
     def update_dist(self,X,lr):
-        X = X.view(X.shape[:-self.dist.event_dim]+self.event_dim*(1,) + self.dist.event_shape)
-        self.dist.raw_update(X,self.p,lr)
+        Xv = X.view(X.shape[:-self.dist.event_dim]+self.event_dim*(1,) + self.dist.event_shape)
+        self.dist.raw_update(Xv,self.p,lr)
 
     def Elog_like(self,X):
         X = X.view(X.shape[:-self.dist.event_dim]+self.event_dim*(1,) + self.dist.event_shape)

@@ -10,7 +10,7 @@ import torch
 
 class ConjugateDistribution():
     def __init__(self,event_shape,batch_shape=(),prior_parms = None):
-        self.event_dim_0 = 0 # smallest possible event dimension
+        self.min_event_dim = 0 # smallest allowable event dimension
         self.event_shape = event_shape
         self.batch_shape = batch_shape
         self.event_dim = len(event_shape)
@@ -19,10 +19,10 @@ class ConjugateDistribution():
         if prior_parms is None:
             # set default parameters of the prior distribution here
             # each element of this list is a function of the event_shape expanded to the batch_shape
-            self.nat_parms_0 = []  
+            self.eta_0 = []  
         else: 
             self.nat_parms_0 = prior_parms.copy()
-        self.nat_parms = []    # each list element is a random perturbation of the corresponding element of nat_parms_0
+        self.eta = []    # each list element is a random perturbation of the corresponding element of nat_parms_0
         self._ET = []
         self.SS = []
 
@@ -47,8 +47,22 @@ class ConjugateDistribution():
                 pass
         return self._ET
 
+    def log_measure(self,x):
+        pass
+
+    def log_partition(self):
+        # log of the partition function of the likelihood evaluated
+        # at the expected sufficient statistic A(<\eta>) = A(nat_parms)
+        pass
+
+    def expected_log_partition(self):  
+        pass
+
     def logZ(self):  # log partition function of the natural parameters often called A(\eta)
         return self._logZ
+    
+    def logZ_prior(self):
+        return self._logZ_prior
 
     def logZ_ub(self): # upper bound on the log partition function 
         return self._logZ_ub
@@ -71,8 +85,8 @@ class ConjugateDistribution():
             self.SS = SS.copy()
         for i, parm in self.nat_parms:        
             self.nat_parm[i] = (self.SS[i] + self.nat_parms_0[i])*lr + self.nat_parms[i]*(1-lr)
-        self.ET()
-        self.logZ()
+        self._ET = None
+        self._logZ = None
 
     def raw_update(self,X,p=None,lr=1.0):
         if p is None: 

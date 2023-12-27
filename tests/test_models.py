@@ -38,8 +38,8 @@ model = ARHMM(5,2,3)
 model.update(XY,iters=20,lr=1,verbose=True)
 loc= model.ELBO().argmax()
 
-plt.plot(model.p[:,0,:].data)
-plt.plot(z[:,0].data-hidden_dim/2.0)
+plt.plot(model.p[:,0,:].numpy())
+plt.plot(z[:,0].numpy()-hidden_dim/2.0)
 plt.show()
 
 
@@ -52,8 +52,8 @@ pY = dists.Delta(Y)
 pXY = (pX,pY)
 model.update(pXY,iters=20,lr=1,verbose=True)
 
-plt.plot(model.p[:,0,:].data)
-plt.plot(z[:,0].data-hidden_dim/2.0)
+plt.plot(model.p[:,0,:].numpy())
+plt.plot(z[:,0].numpy()-hidden_dim/2.0)
 plt.show()
 
 Y = Y.unsqueeze(-4)
@@ -67,8 +67,8 @@ print('Test batch of ARHMM prXY')
 model = ARHMM_prXY(5,2,3,batch_shape=(batch_dim,))
 model.update(pXY,iters=20,lr=1,verbose=True)
 loc= model.ELBO().argmax()
-plt.plot(model.p[:,0,loc,:].data)
-plt.plot(z[:,0].data-hidden_dim/2.0)
+plt.plot(model.p[:,0,loc,:].numpy())
+plt.plot(z[:,0].numpy()-hidden_dim/2.0)
 plt.show()
 
 
@@ -124,10 +124,10 @@ model.raw_update(Y,iters=10,lr=1,verbose=True)
 
 Yhat = model.A.mean()@model.postdict(Y).mean()
 from matplotlib import pyplot as plt
-plt.scatter(Y,Yhat)
+plt.scatter(Y.numpy(),Yhat.numpy())
 plt.show()
 
-plt.scatter(A@A.transpose(-2,-1),model.A.EXXT())
+plt.scatter((A@A.transpose(-2,-1)).numpy(),model.A.EXXT().numpy())
 plt.show()
 
 
@@ -169,8 +169,8 @@ model.raw_update(X,Y,iters=20,lr=0.5,verbose=True)
 
 
 from matplotlib import pyplot as plt
-plt.plot(-z[:,0])
-plt.plot(model.p[:,0])
+plt.plot(-z[:,0].numpy())
+plt.plot(model.p[:,0].numpy())
 plt.show() 
 B1 = B/(B*B).sum(-1,keepdim=True).sqrt()
 B2 = model.obs_dist.mean()
@@ -236,28 +236,28 @@ else:
     mu = pY.mean()
 
 idx = (p.unsqueeze(-1)*pr.unsqueeze(-2)).mean(0).argmax(-2)
-plt.scatter(pr.log(),p[:,idx].log())
-plt.plot([p.log().min(),p.log().max()],[p.log().min(),p.log().max()])
+plt.scatter(pr.log().numpy(),p[:,idx].log().numpy())
+plt.plot([p.log().min().numpy(),p.log().max().numpy()],[p.log().min().numpy(),p.log().max().numpy()])
 plt.title('log Assignment Probabilities')
 plt.xlabel('True')
 plt.ylabel('Estimated')
 plt.show()
 
-plt.scatter(A,Abar[idx],c=idx.unsqueeze(-1).unsqueeze(-1).expand(A.shape))
-plt.plot([A.min(),A.max()],[A.min(),A.max()])
+plt.scatter(A.numpy(),Abar[idx].numpy(),c=idx.unsqueeze(-1).unsqueeze(-1).expand(A.shape).numpy())
+plt.plot([A.min().numpy(),A.max().numpy()],[A.min().numpy(),A.max().numpy()])
 plt.title('Regression Weights')
 plt.xlabel('True')
 plt.ylabel('Estimated')
 plt.show()
 
-plt.scatter(X,muX.squeeze(-1))
+plt.scatter(X.numpy(),muX.squeeze(-1).numpy())
 plt.plot([X.min(),X.max()],[X.min(),X.max()])
 plt.title('Regressors: X from Backward routine')
 plt.xlabel('True')
 plt.ylabel('Estimated')
 plt.show()
 
-plt.scatter(Y,mu.squeeze(-1),c=p.argmax(-1,True).expand(-1,n))
+plt.scatter(Y.numpy(),mu.squeeze(-1).numpy(),c=p.argmax(-1,True).expand(-1,n).numpy())
 plt.plot([Y.min(),Y.max()],[Y.min(),Y.max()])
 plt.title('Predictions')
 plt.xlabel('True')
@@ -265,11 +265,11 @@ plt.ylabel('Estimated')
 plt.show()
 
 mu = mu.squeeze(-1)
-plt.scatter(Y[:,0],Y[:,1],c=logits.argmax(-1))
+plt.scatter(Y[:,0].numpy(),Y[:,1].numpy(),c=logits.argmax(-1).numpy())
 plt.title('True Labels')
 plt.show()
 
-plt.scatter(mu[:,0],mu[:,1],c=p.argmax(-1))
+plt.scatter(mu[:,0].numpy(),mu[:,1].numpy(),c=p.argmax(-1).numpy())
 plt.title('Predited Labels')
 plt.show()
 
@@ -313,7 +313,7 @@ model = HMM(obs_dist)
 t = time.time()
 model.update(y,T=None,iters=20,lr=1,verbose=True)
 print('HMM time = ',time.time()-t)
-plt.scatter(y[...,0],y[...,1],c=model.assignment())
+plt.scatter(y[...,0].numpy(),y[...,1].numpy(),c=model.assignment().numpy())
 plt.show()
 
 print('TEST Vanilla HHMM')
@@ -323,7 +323,7 @@ model = HHMM(obs_dist,3)
 t = time.time()
 model.update(y,iters=20,lr=1,verbose=True)
 print('HHMM time = ',time.time()-t)
-plt.scatter(y[...,0],y[...,1],c=model.p.reshape(T,num_samples,24).argmax(-1))
+plt.scatter(y[...,0].numpy(),y[...,1].numpy(),c=model.p.reshape(T,num_samples,24).argmax(-1).numpy())
 plt.show()
 
 print('Test Discrete Generalized Coorinate model')
@@ -332,7 +332,7 @@ model = HHMM(obs_dist,event_dim = 3, event_shape=dims)
 t=time.time()
 model.update(y,iters=20,lr=1,verbose=True)
 print('HHMM time = ',time.time()-t)
-plt.scatter(y[...,0],y[...,1],c=model.p.reshape(T,num_samples,24).argmax(-1))
+plt.scatter(y[...,0].numpy(),y[...,1].numpy(),c=model.p.reshape(T,num_samples,24).argmax(-1).numpy())
 plt.show()
 
 print('TEST TENSOR_HMM')
@@ -344,7 +344,7 @@ model = Tensor_HMM(obs_dist,event_shape=dims)
 t=time.time()
 model.update(y,iters=20,lr=1,verbose=True)
 print('Tensor_HMM time = ',time.time()-t)
-plt.scatter(y[...,0],y[...,1],c=model.p.reshape(T,num_samples,24).argmax(-1))
+plt.scatter(y[...,0].numpy(),y[...,1].numpy(),c=model.p.reshape(T,num_samples,24).argmax(-1).numpy())
 plt.show()
 
 
@@ -358,10 +358,10 @@ model.update(y.unsqueeze(-2),20,verbose=True)
 ELBO = model.ELBO()
 loc = ELBO.argmax()
 print(ELBO - ELBO[loc])
-plt.scatter(y[:,0,0],y[:,0,1],c=model.assignment()[:,0,loc])
+plt.scatter(y[:,0,0].numpy(),y[:,0,1].numpy(),c=model.assignment()[:,0,loc].numpy())
 plt.show()
-plt.plot(model.p[:,0,loc,:].data)
-plt.plot(z[:,0].data-hidden_dim/2.0)
+plt.plot(model.p[:,0,loc,:].numpy())
+plt.plot(z[:,0].numpy()-hidden_dim/2.0)
 plt.show()
 
 
@@ -412,8 +412,8 @@ model.update(y,10,verbose=True)
 y = y.reshape(T,num_samples,6)
 plt.scatter(y[:,0,0],y[:,0,1],c=model.assignment()[:,0])
 plt.show()
-plt.plot(model.p[:,0,:].data)
-plt.plot(z[:,0].data-hidden_dim/2.0)
+plt.plot(model.p[:,0,:].numpy())
+plt.plot(z[:,0].numpy()-hidden_dim/2.0)
 plt.show()
 
 print('HMM TEST COMPLETE')
@@ -421,13 +421,15 @@ print('HMM TEST COMPLETE')
 
 print('TEST LinearDynamicalSystem')
 import torch
+# torch.set_default_device('cuda')  # This breaks all plotting routines (matplotlib doesn't work with device = cuda)
+
 import numpy as np
 from models.LinearDynamicalSystems import LinearDynamicalSystems
 from matplotlib import pyplot as plt
 import time
 dt = 0.2
 num_systems = 6
-obs_dim = 6
+obs_dim = 4
 hidden_dim = 2
 control_dim = 2
 regression_dim = 3
@@ -437,11 +439,12 @@ regression_dim = 3
 #A_true = -A_true @ A_true.transpose(-1,-2) * dt + torch.eye(hidden_dim)
 C_true = 0.05*torch.randn(hidden_dim,control_dim)/control_dim
 A_true = torch.eye(2) + dt*torch.tensor([[-0.01,-1.0],[1.0,-0.01]])
+#A_true = torch.eye(4) + dt*torch.randn(4,4)/10.0
 B_true = torch.randn(obs_dim,hidden_dim)/np.sqrt(hidden_dim)
 D_true = 0.05*torch.randn(obs_dim,regression_dim)/np.sqrt(regression_dim)
 
-Tmax = 100
-batch_num = 99
+Tmax = 200
+batch_num = 2
 sample_shape = (Tmax,batch_num)
 num_iters = 20
 y = torch.zeros(Tmax,batch_num,obs_dim)
@@ -455,24 +458,24 @@ for t in range(1,Tmax):
     x[t] = x[t-1] @ A_true.transpose(-1,-2) + torch.randn(batch_num,hidden_dim)/20.0*np.sqrt(dt) + u[t] @ C_true.transpose(-1,-2)*dt 
     y[t] = x[t-1] @ B_true.transpose(-1,-2)  + torch.randn(batch_num,obs_dim)/20.0 + r[t] @ D_true.transpose(-1,-2) 
 
-y2 = y.reshape(y.shape[:-1]+(3,2))
+y2 = y.reshape(y.shape[:-1]+(2,2))
 r2 = r.unsqueeze(-2).repeat(1,1,3,1)
 
 
 print('TEST LDS VANILLA NO REGRESSORS OR CONTROLS or BIAS TERMS')
 obs_shape = (obs_dim,)
 sample_shape = (Tmax,batch_num)
-lds = LinearDynamicalSystems(obs_shape,hidden_dim,control_dim=-1,regression_dim=-1,latent_noise='indepedent')
 t = time.time()
-lds.update(y,iters=20,lr=1,verbose=True)
+lds = LinearDynamicalSystems(obs_shape,hidden_dim,control_dim=-1,regression_dim=-1,latent_noise='indepedent')
+lds.update(y,iters=15,lr=1,verbose=True)
 print('LDS time = ',time.time()-t)
 fbw_mu = lds.px.mean().squeeze()
 fbw_Sigma = lds.px.ESigma().diagonal(dim1=-2,dim2=-1).squeeze().sqrt()
 
-xp=fbw_mu[:,0,0].data
-yp=fbw_mu[:,0,1].data
-xerr=fbw_Sigma[:,0,0].data
-yerr=fbw_Sigma[:,1,1].data
+xp=fbw_mu[:,0,0].numpy()
+yp=fbw_mu[:,0,1].numpy()
+xerr=fbw_Sigma[:,0,0].numpy()
+yerr=fbw_Sigma[:,1,1].numpy()
 
 plt.errorbar(xp,yp,xerr=xerr,yerr=yerr,fmt='o',color='#8F94CC',ecolor='#8F94CC',elinewidth=1,capsize=0)
 plt.plot(xp[:-1],yp[:-1])
@@ -488,10 +491,10 @@ lds.update(y,iters=20,lr=1,verbose=True)
 fbw_mu = lds.px.mean().squeeze()
 fbw_Sigma = lds.px.ESigma().diagonal(dim1=-2,dim2=-1).squeeze().sqrt()
 
-xp=fbw_mu[:,0,0].data
-yp=fbw_mu[:,0,1].data
-xerr=fbw_Sigma[:,0,0].data
-yerr=fbw_Sigma[:,1,1].data
+xp=fbw_mu[:,0,0].numpy()
+yp=fbw_mu[:,0,1].numpy()
+xerr=fbw_Sigma[:,0,0].numpy()
+yerr=fbw_Sigma[:,1,1].numpy()
 
 plt.errorbar(xp,yp,xerr=xerr,yerr=yerr,fmt='o',color='#8F94CC',ecolor='#8F94CC',elinewidth=1,capsize=0)
 plt.plot(xp[:-1],yp[:-1])
@@ -507,10 +510,10 @@ lds.update(y,iters=20,lr=1,verbose=True)
 fbw_mu = lds.px.mean().squeeze()
 fbw_Sigma = lds.px.ESigma().diagonal(dim1=-2,dim2=-1).squeeze().sqrt()
 
-xp=fbw_mu[:,0,0].data
-yp=fbw_mu[:,0,1].data
-xerr=fbw_Sigma[:,0,0].data
-yerr=fbw_Sigma[:,1,1].data
+xp=fbw_mu[:,0,0].numpy()
+yp=fbw_mu[:,0,1].numpy()
+xerr=fbw_Sigma[:,0,0].numpy()
+yerr=fbw_Sigma[:,1,1].numpy()
 
 plt.errorbar(xp,yp,xerr=xerr,yerr=yerr,fmt='o',color='#8F94CC',ecolor='#8F94CC',elinewidth=1,capsize=0)
 plt.plot(xp[:-1],yp[:-1])
@@ -525,10 +528,10 @@ lds.update(y,u,r,iters=20,lr=1,verbose=True)
 fbw_mu = lds.px.mean().squeeze()
 fbw_Sigma = lds.px.ESigma().diagonal(dim1=-2,dim2=-1).squeeze().sqrt()
 
-xp=fbw_mu[:,0,0].data
-yp=fbw_mu[:,0,1].data
-xerr=fbw_Sigma[:,0,0].data
-yerr=fbw_Sigma[:,1,1].data
+xp=fbw_mu[:,0,0].numpy()
+yp=fbw_mu[:,0,1].numpy()
+xerr=fbw_Sigma[:,0,0].numpy()
+yerr=fbw_Sigma[:,1,1].numpy()
 
 plt.errorbar(xp,yp,xerr=xerr,yerr=yerr,fmt='o',color='#8F94CC',ecolor='#8F94CC',elinewidth=1,capsize=0)
 plt.plot(xp,yp)
@@ -581,10 +584,10 @@ fbw_Sigma = lds.px.ESigma().diagonal(dim1=-2,dim2=-1).squeeze().sqrt()
 
 m,idx = lds.ELBO().max(-1)
 
-xp=fbw_mu[:,0,idx,0].data
-yp=fbw_mu[:,0,idx,1].data
-xerr=fbw_Sigma[:,0,idx,0].data
-yerr=fbw_Sigma[:,0,idx,1].data
+xp=fbw_mu[:,0,idx,0].numpy()
+yp=fbw_mu[:,0,idx,1].numpy()
+xerr=fbw_Sigma[:,0,idx,0].numpy()
+yerr=fbw_Sigma[:,0,idx,1].numpy()
 
 plt.errorbar(xp,yp,xerr=xerr,yerr=yerr,fmt='o',color='#8F94CC',ecolor='#8F94CC',elinewidth=1,capsize=0)
 plt.plot(xp,yp)
@@ -723,13 +726,13 @@ plt.show()
 plt.scatter(Y[:,0],Y[:,1],c=model2.p.argmax(-1,True))
 plt.show()
 
-plt.scatter(Y,Yhat,c=assignments.unsqueeze(-1).expand(-1,n))
+plt.scatter(Y.numpy(),Yhat.numpy(),c=assignments.unsqueeze(-1).expand(-1,n).numpy())
 plt.title('dMixtures of Linear Transforms Predictions')
 plt.show()
 
 
 Yhat2 = model2.predict(X.unsqueeze(-1))[0].mean().squeeze()
-plt.scatter(Y,Yhat2,c=model2.p.argmax(-1,True).expand(-1,n))
+plt.scatter(Y.numpy(),Yhat2.numpy(),c=model2.p.argmax(-1,True).expand(-1,n).numpy())
 plt.title('Mixtures of Linear Transforms Predictions')
 plt.show()
 print('dMix Percent Variance Explained = ',100-((Y-Yhat)**2).mean()/Y.var()*100)
@@ -742,12 +745,13 @@ import numpy as np
 from  matplotlib import pyplot as plt
 import dists, transforms
 
-n=5
-p=10
-num_samples = 1000
+n=10
+p=20
+num_samples =1000
 W = 4*torch.randn(n,p)/np.sqrt(p)
-X = torch.randn(num_samples,p)
+X = torch.randn(num_samples,p)@torch.randn(p,p)/np.sqrt(p)
 X = X-X.mean(0,True)
+X = X/X.std()
 B = torch.randn(n)
 
 
@@ -757,8 +761,15 @@ pY = (logpY - logpY.logsumexp(-1,True)).exp()
 Y = torch.distributions.OneHotCategorical(logits = logpY).sample()
 
 model = transforms.MultiNomialLogisticRegression(n,p,pad_X=True)
+mini_batch_size = 100
+num_mini_batches = X.shape[0]//mini_batch_size
 
-model.raw_update(X,Y,iters =20,verbose=True)
+for i in range(num_mini_batches):
+    Xtrain = X[i*mini_batch_size:(i+1)*mini_batch_size]
+    Ytrain = Y[i*mini_batch_size:(i+1)*mini_batch_size]
+    model.raw_update(Xtrain,Ytrain,iters = 1,verbose=True,beta=1)
+
+
 
 #model.update(Delta(X.unsqueeze(-1)),Y,iters =4)
 W_hat = model.beta.mean().squeeze(-1)
@@ -766,7 +777,7 @@ W_true = (W[:-1] - W[-1:])
 W_hat = 2*W_hat - W_hat.cumsum(0)
 if model.pad_X is True:
     W_hat = W_hat[:,:-1]
-plt.scatter(W_true,W_hat)
+plt.scatter(W_true.numpy(),W_hat.numpy())
 plt.plot([W_true.min(),W_true.max()],[W_true.min(),W_true.max()])
 plt.title('weights')
 plt.show()
@@ -774,7 +785,7 @@ plt.show()
 print('Predictions by lowerbounding with q(w|b,<psi^2>)')
 psb = model.predict(X)
 for i in range(n):
-    plt.scatter(pY.log()[:,i],psb.log()[:,i])    
+    plt.scatter(pY.log()[:,i].numpy(),psb.log()[:,i].numpy())    
 plt.plot([pY.log().min(),0],[pY.log().min(),0])
 plt.show()
 # for i in range(n):
@@ -785,7 +796,7 @@ plt.show()
 print('Predictions by marginaling out q(beta) with w = <w|b,<psi^2>>')
 psb2 = model.predict_2(X)
 for i in range(n):
-    plt.scatter(pY.log()[:,i],psb2.log()[:,i])    
+    plt.scatter(pY.log()[:,i].numpy(),psb2.log()[:,i].numpy())    
 plt.plot([pY.log().min(),0],[pY.log().min(),0])
 plt.show()
 psb2 = model.predict(X)
@@ -793,15 +804,15 @@ psb2 = model.predict(X)
 #     plt.scatter(pY[:,i],psb2[:,i])    
 # plt.plot([0,1],[0,1])
 # plt.show()
-print('Percent Correct (best possible)', ((Y.argmax(-1)==pY.argmax(-1)).sum()/Y.shape[0]).data*100)
-print('Percent Correct   = ',((Y.argmax(-1)==psb.argmax(-1)).sum()/Y.shape[0]).data*100)
-print('Percent Correct_2 = ',((Y.argmax(-1)==psb2.argmax(-1)).sum()/Y.shape[0]).data*100)
+print('Percent Correct (best possible)', ((Y.argmax(-1)==pY.argmax(-1)).sum()/Y.shape[0]).numpy()*100)
+print('Percent Correct   = ',((Y.argmax(-1)==psb.argmax(-1)).sum()/Y.shape[0]).numpy()*100)
+print('Percent Correct_2 = ',((Y.argmax(-1)==psb2.argmax(-1)).sum()/Y.shape[0]).numpy()*100)
 
 xbar = X[Y.argmax(-1)==0].mean(0,True)
 for i in range(1,n):
     xbar = torch.cat((xbar,X[Y.argmax(-1)==i].mean(0,True)),dim=-2)
 
-plt.scatter(xbar,model.backward(torch.eye(n),None)[0].mean().squeeze())
+plt.scatter(xbar.numpy(),model.backward(torch.eye(n),None)[0].mean().squeeze().numpy())
 plt.plot([xbar.min(),xbar.max()],[xbar.min(),xbar.max()])
 plt.title('backward estimate')
 plt.show()
@@ -867,9 +878,9 @@ label = ['Low Rank','Full Rank','dMix','NL Multinomial','Mix Linear']
 
 U_true = X@W_true
 U_true = U_true/U_true.std(0,True)
-plt.scatter(U_true,Y,c='black')
+plt.scatter(U_true.numpy(),Y.numpy(),c='black')
 for k, pred in enumerate(predictions):
-    plt.scatter(U_true,pred[...,0],alpha=0.5)
+    plt.scatter(U_true,pred[...,0].numpy(),alpha=0.5)
 plt.legend(['True']+label)
 plt.show()
 
@@ -898,16 +909,16 @@ Y=U@A.transpose(-2,-1) + torch.randn(num_samps,n)/n
 model.raw_update(X.unsqueeze(-2),Y.unsqueeze(-2),iters=10,lr=1,verbose=True)
 What = model.A.mean()@model.B.mean().pinverse()
 idx = model.logZ.argmax()
-plt.scatter(W,What[idx])
+plt.scatter(W.numpy(),What[idx].numpy())
 plt.title('Weights')
 minW = W.min()
 maxW = W.max()
 plt.plot([minW,maxW],[minW,maxW],'k')
 plt.show()
 
-pY = model.predict(X.unsqueeze(-2).unsqueeze(-1))
+pY = model.predict(X.unsqueeze(-2).unsqueeze(-1))[0]
 #pY = model.predict(X.unsqueeze(-1))
-plt.scatter(Y,pY.mean().squeeze(-1)[...,idx,:])
+plt.scatter(Y.numpy(),pY.mean().squeeze(-1)[...,idx,:].numpy())
 minY = Y.min()
 maxY = Y.max()
 plt.plot([minY,maxY],[minY,maxY],'k')
@@ -943,15 +954,15 @@ CCT = CCT/CCT.det().unsqueeze(-1).unsqueeze(-1)**(1/2)
 model.raw_update(X,lr=1)
 from matplotlib import pyplot as plt
 
-plt.scatter(AAT,model.invU[0].ESigma().squeeze())
-plt.scatter(BBT,model.invU[1].ESigma().squeeze())
-plt.scatter(CCT,model.invU[2].ESigma().squeeze())
+plt.scatter(AAT.numpy(),model.invU[0].ESigma().squeeze().numpy())
+plt.scatter(BBT.numpy(),model.invU[1].ESigma().squeeze().numpy())
+plt.scatter(CCT.numpy(),model.invU[2].ESigma().squeeze().numpy())
 m1 = torch.tensor([AAT.min(),BBT.min(),CCT.min()]).min()
 m2 = torch.tensor([AAT.max(),BBT.max(),CCT.max()]).max()
 plt.plot([m1,m2],[m1,m2])
 plt.show()
 
-plt.scatter(ABCABCT.reshape(ABCABCT.numel()),model.ESigma().reshape(model.ESigma().numel()))
+plt.scatter(ABCABCT.reshape(ABCABCT.numel()).numpy(),model.ESigma().reshape(model.ESigma().numel()).numpy())
 m1 = ABCABCT.min()
 m2 = ABCABCT.max()
 plt.plot([m1,m2],[m1,m2])
@@ -968,7 +979,7 @@ for i in range(200):
 
 model = PoissonMixtureModel(4,10)
 model.update(X,iters=10,verbose=True)
-plt.scatter(X[:,0],X[:,1],c=model.assignment(),alpha=model.assignment_pr().max(-1)[0].data)
+plt.scatter(X[:,0].numpy(),X[:,1].numpy(),c=model.assignment().numpy(),alpha=model.assignment_pr().max(-1)[0].numpy())
 plt.show()
 
 print('Test Poisson Mixture Model')
@@ -983,5 +994,5 @@ for i in range(200):
 
 model = models.PoissonMixtureModel(nc=4,dim=10)
 model.update(X,iters=10,verbose=True)
-plt.scatter(X[:,0],X[:,1],c=model.assignment(),alpha=model.assignment_pr().max(-1)[0].data)
+plt.scatter(X[:,0].numpy(),X[:,1].numpy(),c=model.assignment().numpy(),alpha=model.assignment_pr().max(-1)[0].numpy().numpy())
 plt.show()

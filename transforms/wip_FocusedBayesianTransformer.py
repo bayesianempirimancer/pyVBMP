@@ -7,12 +7,14 @@ from .MatrixNormalWishart import MatrixNormalWishart
 from .MatrixNormalGamma import MatrixNormalGamma
 from .MultiNomialLogisticRegression import MultiNomialLogisticRegression
 from .dMixtureofLinearTransforms import dMixtureofLinearTransforms
+from utils.torch_functions import *
 
 
 class FocusedBayesianTransformer():
     # Here the idea is that roles should be selected based upon the hidden latent, i.e. p(role|x_k,z=k) is MNLR
     # This is accomplished by simply doing a mixture of directed mixture of linear transforms with the latent x_k's computed 
-    # by averaging over the observations given the assignments
+    # by averaging over the observations given the assignments.  
+    # This routine expects Y.shape = sample_shape x batch_shape x num_obs x event_shape
 
     def __init__(self, mixture_dim, role_dim, obs_dim, hidden_dim, batch_shape = (), pad_X=False):
         self.obs_dim = obs_dim # dimension of the observations (note that the number of observations can vary)
@@ -24,7 +26,9 @@ class FocusedBayesianTransformer():
         self.mixture_dim = mixture_dim # the number of different latents
 
         self.W = dMixtureofLinearTransforms(obs_dim,hidden_dim,role_dim,batch_shape = (mixture_dim,),pad_X=pad_X)
-        self.pi = Dirichlet(torch.ones(mixture_dim,requires_grad=False))        
+                # sample x mixture_Dim x role_dim x hidden_dim x (obs_dims,1)
+                # so that W.Elog_like has shape mixture_dim
+        self.pi = Dirichlet((mixture_dim,))        
 
         self.p = None
         self.pX = None
@@ -37,13 +41,10 @@ class FocusedBayesianTransformer():
             self.pX = MultivariateNormal_vector_format(invSigma = torch.eye(self.hidden_dim,requires_grad=False), invSigmamu = torch.zeros(1,self.mixture_dim,self.hidden_dim,1,requires_grad=False))
 
         log_p = self.W.Elog_like_given_pX_pY(self.pX,Delta(Y.unsqueeze(-1).unsqueeze(-3))) + self.pi.ElogX()
-        shift = log_p.max(-1,keepdim=True)[0]
-        log_p = (log_p-shift)
-        logZ = log_p.logsumexp(-1) + shift.squeeze(-1)
-        log_p = log_p.exp()
-        log_p = log_p/log_p.sum(-1,keepdim=True)
-        self.p = log_p 
-        self.NA = self.p.sum((0,-2))
+        logZ = stable_logsumexp(log_p,-1,True)
+        self.p = (log_p - logZ).exp()
+        logZ = logZ.squeeze(-1)
+        self.NA = self.p.sum((0,-2))  # The -2 sums over the observations
 #        return logZ.logsumexp(-1)  # returns the ELBO contrib for each data point Y
 
     def update_latents(self,Y):

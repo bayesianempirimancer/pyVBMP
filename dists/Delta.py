@@ -1,4 +1,8 @@
 import torch
+# Implements a delta function distribution centered on the values of X
+# The principle utility of this distribution is to allow for the treatment
+# of observations as distributions which can emit required expectations
+
 class Delta():
     def __init__(self,X):
         self.X = X
@@ -15,14 +19,6 @@ class Delta():
     def cumsum(self,dim):
         return self.X.cumsum(dim)
 
-    # def Elog_like(self):
-    #     torch.ones(self.X.shape[:-self.event_dim],requires_grad=False)
-
-    # def KLqprior(self):
-    #     return torch.zeros(self.X.shape[:-self.event_dim],requires_grad=False)
-
-    # def ELBO(self):
-    #     return torch.zeros(self.X.shape[:-self.event_dim],requires_grad=False)
     @property
     def shape(self):
         return self.X.shape

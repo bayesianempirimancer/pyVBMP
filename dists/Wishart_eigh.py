@@ -68,6 +68,9 @@ class Wishart_eigh():
     def EinvSigma(self):
         return self.U*self.nu.unsqueeze(-1).unsqueeze(-1)
 
+    def logdetEinvSigma(self):
+        return -self.logdet_invU + self.nu.log()
+
     def ElogdetinvSigma(self):
         return self.dim*torch.log(torch.tensor(2,requires_grad=False)) - self.logdet_invU + ((self.nu.unsqueeze(-1)  - torch.arange(self.dim))/2.0).digamma().sum(-1)
 

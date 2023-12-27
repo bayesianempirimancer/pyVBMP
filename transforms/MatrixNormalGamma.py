@@ -19,9 +19,11 @@ class MatrixNormalGamma():
     #   X_mask is a boolean tensor of shape (mu_0.shape[:-2] + (1,) + mu_shape[-1:]) 
     #           that indicates which entries of X contribute to the prediction 
 
-    def __init__(self, event_shape, batch_shape = (), prior_parms = {'mu':torch.tensor(0.0)}, scale=1.0, uniform_precision=False, mask=None, X_mask=None, pad_X=False, fixed_precision=False):
-        self.n = event_shape[-2]
-        self.p = event_shape[-1]
+    def __init__(self, event_shape, batch_shape = (), 
+                 prior_parms = {'mu':torch.tensor(0.0)}, scale=1.0, 
+                 uniform_precision=False, mask=None, X_mask=None, pad_X=False, fixed_precision=False):
+        self.n = torch.tensor(event_shape[-2]).long()
+        self.p = torch.tensor(event_shape[-1]).long()
         self.pad_X = pad_X
         self.fixed_precision = fixed_precision
         self.uniform_precision = uniform_precision
@@ -42,8 +44,7 @@ class MatrixNormalGamma():
         self.mask = mask
         self.X_mask = X_mask
         self.mu_0 = mu_0
-        self.mu = torch.randn_like(mu_0,requires_grad=False)/torch.sqrt(torch.tensor(self.p,requires_grad=False))+mu_0
-
+        self.mu = torch.randn_like(mu_0,requires_grad=False)/self.p.sqrt()
         self.invV_0 = torch.eye(self.p,requires_grad=False).expand(batch_shape + event_shape[:-2] + (self.p,self.p))
         self.invV = self.invV_0
         self.V = self.invV.inverse()

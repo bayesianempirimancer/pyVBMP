@@ -78,8 +78,11 @@ class DynamicMarkovBlanketDiscovery(LinearDynamicalSystems):
 
         self.B = self.obs_model.obs_dist
 #        self.B.mu = torch.randn_like(self.B.mu,requires_grad=False)*self.B.X_mask/np.sqrt(np.sum(hidden_dims)/len(hidden_dims))
-        self.B.invU.invU_0        = self.B.invU.invU_0/torch.tensor(self.role_dim).float()
+        self.B.invU.invU_0        = self.B.invU.invU_0/torch.tensor(self.role_dim**2).float()
+        self.B.invU.invU = self.B.invU.invU_0.clone()
         self.B.invU.logdet_invU_0 = self.B.invU.invU_0.logdet()
+        self.B.invU.logdet_invU = self.B.invU.invU.logdet()
+        self.B.ptemp = 20.0
         # if number_of_objects == 1:
         #     self.obs_model.obs_dist.mu[...,role_dims[1]:role_dims[1]+role_dims[2],:,:] = 0.0
         #     self.A.mu[...,hidden_dims[1]:hidden_dims[1]+hidden_dims[2],hidden_dims[1]:hidden_dims[1]+hidden_dims[2]] = torch.eye(hidden_dims[2])

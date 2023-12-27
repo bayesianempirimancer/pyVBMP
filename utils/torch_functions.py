@@ -11,3 +11,12 @@ def logmatmulexp(x,y):
     y_shift = y.max(-2, keepdim=True)[0]
     xy = torch.matmul((x - x_shift).exp(), (y - y_shift).exp()).log()
     return xy + x_shift + y_shift
+
+def log_mvgamma(nu,dim):
+    return (nu.unsqueeze(-1) - torch.arange(dim)/2.0).lgamma().sum(-1) + dim*(dim-1)/4.0*torch.tensor(torch.pi).log()
+
+def mvgammaln(nu,dim):
+    return (nu.unsqueeze(-1) - torch.arange(dim)/2.0).lgamma().sum(-1) + dim*(dim-1)/4.0*torch.tensor(torch.pi).log()
+
+def mvdigamma(nu,dim):
+    return (nu.unsqueeze(-1) - torch.arange(dim)/2.0).digamma().sum(-1)

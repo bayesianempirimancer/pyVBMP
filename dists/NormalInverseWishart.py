@@ -4,7 +4,7 @@ from .Wishart import Wishart
 class NormalInverseWishart(): 
 
     def __init__(self, event_shape, batch_shape=(), scale=torch.tensor(1.0,requires_grad=False), fixed_precision=False,
-                 prior_parms={'lambda_mu' : torch.tensor(1.0,requires_grad=False),
+                 prior_parms={'lambda_mu': torch.tensor(1.0,requires_grad=False),
                               'mu' : torch.tensor(0.0,requires_grad=False),
                               'nu' : None,
                               'invU' : None}):
@@ -17,9 +17,8 @@ class NormalInverseWishart():
         self.fixed_precision = fixed_precision
 
         self.lambda_mu_0 = prior_parms['lambda_mu'].expand(self.batch_shape + (self.event_dim-1)*(1,))
-        self.mu_0 = prior_parms['mu'].expand(self.batch_shape + self.event_shape)
-        
         self.lambda_mu = self.lambda_mu_0
+        self.mu_0 = prior_parms['mu'].expand(self.batch_shape + event_shape)
         self.mu = self.mu_0 + torch.randn_like(self.mu_0,requires_grad=False)
 
         self.invU = Wishart(event_shape = event_shape + (self.dim,), batch_shape = batch_shape, scale=scale)
@@ -47,10 +46,11 @@ class NormalInverseWishart():
         self.invU.to_event(n)
         return self
 
-    def ss_update(self,SExx,SEx,N, lr=1.0, beta=None):
+    def ss_update(self,SExx,SEx,N, lr=1.0, beta=0.0):
         assert(SExx.ndim == self.batch_dim + self.event_dim + 1)
         assert(SEx.ndim == self.batch_dim + self.event_dim)
         assert(N.ndim == self.batch_dim + self.event_dim -1)
+
         if beta is not None:
             self.SExx = beta*self.SExx + SExx
             self.SEx = beta*self.SEx + SEx
