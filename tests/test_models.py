@@ -994,5 +994,5 @@ for i in range(200):
 
 model = models.PoissonMixtureModel(nc=4,dim=10)
 model.update(X,iters=10,verbose=True)
-plt.scatter(X[:,0].numpy(),X[:,1].numpy(),c=model.assignment().numpy(),alpha=model.assignment_pr().max(-1)[0].numpy().numpy())
+plt.scatter(X[:,0].numpy(),X[:,1].numpy(),c=model.assignment().numpy(),alpha=model.assignment_pr().max(-1)[0].numpy())
 plt.show()
