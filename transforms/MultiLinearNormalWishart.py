@@ -4,7 +4,7 @@ import transforms.MatrixNormalGamma as MatrixNormalGamma
 import dists.Wishart as Wishart
 import dists.DiagonalWishart as DiagonalWishart
 import dists.MultivariateNormal_vector_format as MultivariateNormal_vector_format
-import dists.NormalInverseWishart_vector_format as NormalInverseWishart_vector_format
+import dists.NormalInverseWishart_vector_format_invSigma as NormalInverseWishart_vector_format
 
 class MultiLinearNormalWishart():
     # This class performs inference for a multilinear model of the form Y = A_1@X_1 + A_2@X_2 + ... + B 
@@ -27,22 +27,22 @@ class MultiLinearNormalWishart():
 
         self.A = []
         if noise_type == 'Wishart':
-            self.invU = Wishart(event_shape = (n,n), batch_shape = batch_shape)
+            self.invSigma = Wishart(event_shape = (n,n), batch_shape = batch_shape)
             for i in range(len(self.p_list)):
                 self.A.append(MatrixNormalWishart((n,self.p_list[i]), batch_shape = batch_shape,
                                                   mask=mask_list[i],X_mask=X_mask_list[i],
                                                   fixed_precision=True,pad_X=False))
-                self.A[i].invU = self.invU
+                self.A[i].invU = self.invSigma
         elif noise_type == 'Gamma':
-            self.invU = DiagonalWishart((n,), batch_shape = batch_shape)
+            self.invSigma = DiagonalWishart((n,), batch_shape = batch_shape)
             for i in range(len(self.p_list)):
                 self.A.append(MatrixNormalGamma((n,self.p_list[i]),batch_shape = batch_shape,
                                                 mask=mask_list[i],X_mask=X_mask_list[i],
                                                 fixed_precision=True,pad_X=False))
-                self.A[i].invU = self.invU        
-        self.bias = NormalInverseWishart_vector_format((n,1), batch_shape = batch_shape,
+                self.A[i].invU = self.invSigma        
+        self.bias = NormalInverseWishart_vector_format(event_shape=(n,1), batch_shape = batch_shape,
                                                        fixed_precision=True)
-        self.bias.invU = self.invU
+        self.bias.invSigma = self.invSigma
 
     def to_event(self,n):
         if n == 0:
@@ -52,7 +52,7 @@ class MultiLinearNormalWishart():
             self.A[i].batch_dim = self.A[i].batch_dim - n 
             self.A[i].event_shape = self.A[i].batch_shape[-n:] + self.A[i].event_shape
             self.A[i].batch_shape = self.A[i].batch_shape[:-n]
-        self.invU.to_event(n)
+        self.invSigma.to_event(n)
         return self
 
     def raw_update(self, X_list, Y, p=None, iters = 1, lr=1.0, beta=None):
@@ -98,9 +98,9 @@ class MultiLinearNormalWishart():
             SEyy = SEyy + self.bias.mu_0@self.bias.mu_0.transpose(-2,-1)*self.bias.lambda_mu_0.unsqueeze(-1).unsqueeze(-1)
             
         if self.noise_type == 'Wishart':
-            self.invU.ss_update(SEyy,N,lr,beta)                
+            self.invSigma.ss_update(SEyy,N,lr,beta)                
         elif self.noise_type == 'Gamma':
-            self.invU.ss_update(SEyy.diagonal(dim1=-1,dim2=-2),N.unsqueeze(-1),lr,beta)
+            self.invSigma.ss_update(SEyy.diagonal(dim1=-1,dim2=-2),N.unsqueeze(-1),lr,beta)
 
     def Elog_like(self,X_list,Y):
         sample_shape = Y.shape[:-self.event_dim-self.batch_dim]
@@ -138,13 +138,13 @@ class MultiLinearNormalWishart():
         # where y_i = A_i@x_i + noise/sqrt(len(p_list)).  This assumption of convience 
         # means that we can use the predictions of the A_i's to compute the prediction
         # for y.  
-        self.invU.nu = self.invU.nu/len(self.p_list)
+        self.invSigma.nu = self.invSigma.nu/len(self.p_list)
         pY_list = [None]*len(self.p_list)
         for i in range(len(self.p_list)):
             pY_list[i], Res_i = self.A[i].forward(pX_list[i])
             Res = Res + Res_i
 
-        self.invU.nu = self.invU.nu*len(self.p_list)
+        self.invSigma.nu = self.invSigma.nu*len(self.p_list)
         mu_y = self.bias.mean()
         Sigma_y = 0.0
         for i in range(len(self.p_list)):
@@ -173,14 +173,14 @@ class MultiLinearNormalWishart():
 
         return pX_list
 
-    def backward(self,pY,Res):
+    def variational_backward(self,pY,Res):
         raise NotImplementedError
 
     def update(self,pX,pY,p=None,lr=1.0,beta=None):
         raise NotImplementedError
 
     def KLqprior(self):
-        KL = -self.invU.KLqprior()*(len(self.p_list)-1)
+        KL = -self.invSigma.KLqprior()*(len(self.p_list)-1)
         for i in range(len(self.p_list)):
             KL = KL + self.A[i].KLqprior()
         return KL
@@ -201,13 +201,13 @@ class MultiLinearNormalWishart():
         return self.forward(pX)
 
     def ElogdetinvSigma(self):
-        return self.invU.ElogdetinvSigma()
+        return self.invSigma.ElogdetinvSigma()
     
     def EinvSigma(self):
-        return self.invU.EinvSigma()
+        return self.invSigma.EinvSigma()
 
     def ESigma(self):
-        return self.invU.ESigma()
+        return self.invSigma.ESigma()
 
 
 

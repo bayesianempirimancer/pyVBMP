@@ -1,6 +1,6 @@
 import torch
-import transforms.wip_MultiLinearNormalWishart as MultiLinearNormalWishart
-import dists
+import transforms.MultiLinearNormalWishart as MultiLinearNormalWishart
+import transforms
 import matplotlib.pyplot as plt
 import time
 
@@ -18,7 +18,7 @@ for i in range(len(p_list)):
 W_true = torch.randn(n,p)/torch.sqrt(torch.tensor(p,requires_grad=False))
 Y = W_true@XX + torch.randn(num_samps,n,1)*0.1
 
-m0 = dists.MatrixNormalWishart(mu_0 = torch.zeros((n,p)),pad_X=False)
+m0 = transforms.MatrixNormalWishart(batch_shape = (), event_shape = (n,p),pad_X=False)
 m1 = MultiLinearNormalWishart(n,p_list,batch_shape=(),pad_X=False)
 
 t = time.time()

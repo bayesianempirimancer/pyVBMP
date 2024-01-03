@@ -2,34 +2,46 @@ import torch
 from utils.torch_functions import log_mvgamma, mvdigamma
 class NormalInverseWishart_vector_format(): 
 
-    def __init__(self, parms, prior_parms = None,  event_dim = 2, scale = torch.tensor(1.0,requires_grad=False), fixed_precision = False):
+    def __init__(self, event_shape, batch_shape=(), scale=torch.tensor(1.0,requires_grad=False), fixed_precision=False,
+                 prior_parms={'lambda': torch.tensor(1.0,requires_grad=False),
+                              'lambda_mu' : torch.tensor(0.0,requires_grad=False),
+                              'nu' : None,
+                              'invU' : None},
+                 parms={'lambda': torch.tensor(1.0,requires_grad=False),
+                        'lambda_mu' : torch.tensor(0.0,requires_grad=False),
+                        'nu' : None,
+                        'invU' : None}):
 
-        # Infer dim and batch and event shapes from parameters
         self.min_event_dim = 2
-        self.dim = parms['lmbda_mu'].shape[-2]
-        self.event_dim = event_dim
-        self.event_shape = parms['lmbda_mu'].shape[-event_dim:]
-        self.batch_dim = parms['lmbda_mu'].ndim - event_dim
-        self.batch_shape = parms['lmbda_mu'].shape[:-event_dim]
+        self.dim = event_shape[-2]
+        self.event_shape = event_shape
+        self.event_dim = len(event_shape)
+        self.batch_shape = batch_shape
+        self.batch_dim = len(batch_shape)
         self.fixed_precision = fixed_precision
 
-        self.lmbda = parms['lmbda']
-        self.lmbda_mu = parms['lmbda_mu']
-        self.nu_star = parms['nu_star']
-        self.xi = parms['xi']
-
-        if prior_parms is None:  # Use default prior
-            self.lmbda_0 = torch.tensor(1.0,requires_grad=False).expand(self.batch_shape + self.event_shape[:-2] + (1,1))
-            self.lmbda_mu_0 = torch.tensor(0.0,requires_grad=False).expand(self.batch_shape + self.event_shape)
-            self.nu_star_0 = torch.tensor(2.0,requires_grad=False).expand(self.batch_shape + self.event_shape[:-2] + (1,1))
-            self.xi_0 = torch.eye(self.dim,requires_grad=False).expand(self.batch_shape + self.event_shape[:-2] + (self.dim,self.dim))
+        self.lmbda = parms['lambda'].expand(self.batch_shape + self.event_shape[:-2] + (1,1))
+        self.lmbda_mu = parms['lambda_mu'].expand(self.batch_shape + self.event_shape)
+        if parms['nu'] is None:
+            self.nu_star = torch.tensor(1.0).expand(self.batch_shape + self.event_shape[:-2] + (1,1))
+            self.xi = torch.eye(self.dim,self.dim).expand(self.batch_shape + self.event_shape[:-2] + (self.dim,self.dim))
+            self.xi = self.lmbda_mu@self.lmbda_mu.mT/self.lmbda + self.xi
         else:
-            self.lmbda_0 = prior_parms['lmbda']
-            self.lmbda_mu_0 = prior_parms['lmbda_mu']
-            self.nu_star_0 = prior_parms['nu_star']
-            self.xi_0 = prior_parms['xi']
+            self.nu_star = parms['nu'].expand(self.batch_shape + self.event_shape[:-2] + (1,1)) - self.dim
+            self.xi = parms['invU'].expand(self.batch_shape + self.event_shape[:-2] + (self.dim,self.dim))
+            self.xi = self.lmbda_mu@self.lmbda_mu.mT/self.lmbda + self.xi
 
-        self.logdet_invU_0 = self.invU_0.logdet().unsqueeze(-1).unsqueeze(-1)
+        self.lmbda_0 = prior_parms['lambda'].expand(self.batch_shape + self.event_shape[:-2] + (1,1))
+        self.lmbda_mu_0 = prior_parms['lambda_mu'].expand(self.batch_shape + self.event_shape)
+        if prior_parms['nu'] is None:
+            self.nu_star_0 = torch.tensor(1.0).expand(self.batch_shape + self.event_shape[:-2] + (1,1))
+            self.xi_0 = torch.eye(self.dim,self.dim).expand(self.batch_shape + self.event_shape[:-2] + (self.dim,self.dim))
+            self.xi = self.lmbda_mu_0@self.lmbda_mu_0.mT/self.lmbda_0 + self.xi_0
+        else:
+            self.nu_star_0 = prior_parms['nu'].expand(self.batch_shape + self.event_shape[:-2] + (1,1)) - self.dim
+            self.xi_0 = prior_parms['invU'].expand(self.batch_shape + self.event_shape[:-2] + (self.dim,self.dim))
+            self.xi_0 = self.lmbda_mu_0@self.lmbda_mu_0.mT/self.lmbda_0 + self.xi_0
+
         self.set_expectation_parameters()
 
 # Natural Parameters and associated sufficient statistics for NormalInverseWishart distribution 
@@ -48,11 +60,11 @@ class NormalInverseWishart_vector_format():
 
     @property
     def parms(self):
-        return {'lmbda' : self.lmbda, 'lmbda_mu' : self.lmbda_mu, 'nu_star' : self.nu_star, 'xi' : self.xi}
+        return {'lambda' : self.lmbda, 'lambda_mu' : self.lmbda_mu, 'nu_star' : self.nu_star, 'xi' : self.xi}
 
     @property
     def prior_parms(self):
-        return {'lmbda' : self.lmbda_0, 'lmbda_mu' : self.lmbda_mu_0, 'nu_star' : self.nu_star_0, 'xi' : self.xi_0}
+        return {'lambda' : self.lmbda_0, 'lambda_mu' : self.lmbda_mu_0, 'nu_star' : self.nu_star_0, 'xi' : self.xi_0}
 
     @property
     def mu_0(self):
@@ -106,7 +118,7 @@ class NormalInverseWishart_vector_format():
 
     def set_expectation_parameters(self):
         self.U = self.invU.inverse()
-        self.logdet_invU = self.invU.logdet().unsqueeze(-1).unsqueeze(-1)
+        self.logdet_invU = -self.U.logdet().unsqueeze(-1).unsqueeze(-1)
 
     def raw_update(self,X,p=None,lr=1.0,beta=0.0):   # X is sample_shape + batch_shape x event_shape  OR  sample_shape + (1,)*batch_dim + event_shape
                                                      # if specified p is sample_shape + batch_shape
