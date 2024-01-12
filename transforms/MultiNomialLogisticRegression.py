@@ -40,7 +40,7 @@ class MultiNomialLogisticRegression():
         self.beta.to_event(n)        
         return self
 
-    def raw_update(self,X,Y,iters = 4, p=None,lr=1.0,beta=None,verbose=False):
+    def raw_update(self,X,Y,iters = 2, p=None,lr=1.0,beta=None,verbose=False):
         # Assumes X is sample x batch x p and Y is sample x batch x n
         sample_shape = X.shape[:-self.event_dim-self.batch_dim+1]
         sample_dims = tuple(range(len(sample_shape)))
@@ -79,7 +79,7 @@ class MultiNomialLogisticRegression():
 
             self.beta.ss_update(SExx,SEyx,lr=lr,beta=beta)
 
-    def update(self,pX,pY,iters=1,p=None,lr=1,beta=None,verbose=False):  
+    def update(self,pX,pY,iters=2,p=None,lr=1,beta=None,verbose=False):  
         sample_shape = pX.shape[:-self.event_dim-self.batch_dim+1]
         sample_dims = tuple(range(len(sample_shape)))
         # Here pX is assumed to be a probability distribution that has supports EXXT()

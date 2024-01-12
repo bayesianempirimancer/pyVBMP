@@ -839,11 +839,12 @@ W_true = 5.0*torch.randn(p,n)/np.sqrt(p)
 pad_X = True
 
 Y = (X@W_true).tanh() + torch.randn(num_samps,1)/20*0
+#Y = ((X@W_true).exp()+1).log()
 #Y = (X@W_true)*(X@W_true) + torch.randn(num_samps,1)/20*0
 
 X=X/X.std()
 Y=Y/Y.std()
-Y=Y-Y.mean()
+#Y=Y-Y.mean()
 
 model0 = transforms.NLRegression_low_rank(n,p,hidden_dim,nc,batch_shape=batch_shape)
 model1 = transforms.NLRegression_full_rank(n,p,nc,batch_shape=batch_shape)
@@ -859,12 +860,12 @@ for k, model in enumerate(models):
     print('Training Model ',k)
     t= time.time()
     if(k==4):
-        model.raw_update(X.unsqueeze(-1),Y.unsqueeze(-1),iters = 40,lr=1,verbose=True)
+        model.raw_update(X.unsqueeze(-1),Y.unsqueeze(-1),iters = 20,lr=1,verbose=True)
         inference_cost.append(time.time()-t)
         predictions.append(model.predict(X.unsqueeze(-1))[0].mean().squeeze(-1))
         prediction_cost.append(time.time()-t)
     else:
-        model.raw_update(X,Y,iters = 40,lr=1,verbose=True)
+        model.raw_update(X,Y,iters = 20,lr=1,verbose=True)
         inference_cost.append(time.time()-t)
         t= time.time()
         predictions.append(model.predict(X)[0].mean())
@@ -883,6 +884,16 @@ for k, pred in enumerate(predictions):
     plt.scatter(U_true,pred[...,0].numpy(),alpha=0.5)
 plt.legend(['True']+label)
 plt.show()
+
+U_true = X@W_true
+U_true = U_true/U_true.std(0,True)
+plt.scatter(U_true.numpy(),Y.numpy(),c='black')
+for k, pred in enumerate(predictions):
+    plt.scatter(U_true,pred[...,0].numpy(),alpha=0.5)
+plt.legend(['True']+label)
+plt.show()
+
+
 
 
 print('Test Reduced Rank Regression')
@@ -982,17 +993,3 @@ model.update(X,iters=10,verbose=True)
 plt.scatter(X[:,0].numpy(),X[:,1].numpy(),c=model.assignment().numpy(),alpha=model.assignment_pr().max(-1)[0].numpy())
 plt.show()
 
-print('Test Poisson Mixture Model')
-import torch
-import models
-from matplotlib import pyplot as plt
-mu = torch.rand(4,10)*20
-X = torch.zeros(200,10)
-
-for i in range(200):
-    X[i,:] = torch.poisson(mu[i%4,:])
-
-model = models.PoissonMixtureModel(nc=4,dim=10)
-model.update(X,iters=10,verbose=True)
-plt.scatter(X[:,0].numpy(),X[:,1].numpy(),c=model.assignment().numpy(),alpha=model.assignment_pr().max(-1)[0].numpy())
-plt.show()
