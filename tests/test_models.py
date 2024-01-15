@@ -745,8 +745,8 @@ import numpy as np
 from  matplotlib import pyplot as plt
 import dists, transforms
 
-n=10
-p=20
+n=4
+p=10
 num_samples =1000
 W = 4*torch.randn(n,p)/np.sqrt(p)
 X = torch.randn(num_samples,p)@torch.randn(p,p)/np.sqrt(p)
