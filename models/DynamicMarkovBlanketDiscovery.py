@@ -347,7 +347,7 @@ class DynamicMarkovBlanketDiscovery(LinearDynamicalSystems):
         labels = ['S ',] + self.number_of_objects*labels
         rlabels = ['Br ','Zr ']
         rlabels = ['Sr ',] + self.number_of_objects*rlabels
-        plt.imshow(self.obs_model.obs_dist.mean().abs().sum(-2))
+        plt.imshow(self.obs_model.obs_dist.mean().abs().sum(-2).numpy())
         for i, label in enumerate(labels):
             if i == 0:
                 c = 'red'

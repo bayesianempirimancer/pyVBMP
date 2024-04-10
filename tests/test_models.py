@@ -444,7 +444,7 @@ B_true = torch.randn(obs_dim,hidden_dim)/np.sqrt(hidden_dim)
 D_true = 0.05*torch.randn(obs_dim,regression_dim)/np.sqrt(regression_dim)
 
 Tmax = 200
-batch_num = 2
+batch_num = 20
 sample_shape = (Tmax,batch_num)
 num_iters = 20
 y = torch.zeros(Tmax,batch_num,obs_dim)
@@ -455,8 +455,8 @@ u = torch.randn(Tmax,batch_num,control_dim)/np.sqrt(control_dim)
 r = torch.randn(Tmax,batch_num,regression_dim)/np.sqrt(regression_dim)
 
 for t in range(1,Tmax):
-    x[t] = x[t-1] @ A_true.transpose(-1,-2) + torch.randn(batch_num,hidden_dim)/20.0*np.sqrt(dt) + u[t] @ C_true.transpose(-1,-2)*dt 
-    y[t] = x[t-1] @ B_true.transpose(-1,-2)  + torch.randn(batch_num,obs_dim)/20.0 + r[t] @ D_true.transpose(-1,-2) 
+    x[t] = x[t-1] @ A_true.transpose(-1,-2) + torch.randn(batch_num,hidden_dim)/5.0*np.sqrt(dt) + u[t] @ C_true.transpose(-1,-2)*dt 
+    y[t] = x[t-1] @ B_true.transpose(-1,-2)  + torch.randn(batch_num,obs_dim)/5.0 + r[t] @ D_true.transpose(-1,-2) 
 
 y2 = y.reshape(y.shape[:-1]+(2,2))
 r2 = r.unsqueeze(-2).repeat(1,1,3,1)
@@ -467,8 +467,10 @@ obs_shape = (obs_dim,)
 sample_shape = (Tmax,batch_num)
 t = time.time()
 lds = LinearDynamicalSystems(obs_shape,hidden_dim,control_dim=-1,regression_dim=-1,latent_noise='indepedent')
+t = time.time()
 lds.update(y,iters=15,lr=1,verbose=True)
-print('LDS time = ',time.time()-t)
+runtime = time.time()-t
+print('LDS time = ',runtime)
 fbw_mu = lds.px.mean().squeeze()
 fbw_Sigma = lds.px.ESigma().diagonal(dim1=-2,dim2=-1).squeeze().sqrt()
 

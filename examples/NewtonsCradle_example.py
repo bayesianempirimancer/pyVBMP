@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import models.DynamicMarkovBlanketDiscovery as DMBD
+from models.DynamicMarkovBlanketDiscovery import *
 import time
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation, FFMpegWriter
@@ -39,13 +39,21 @@ xlim = (-1.5,1.5)
 ylim = (-1.2+delta,0.2+delta)
 dy[1] = delta
 new_datas = ()
+v_var = 0.0
+mean_data = 0.0
 for k,data in enumerate(datas):
-    data = data + dy
+    mean_data = mean_data + data.mean((0,1,2)) 
     v_data = torch.diff(data,dim=0)
-    v_data = v_data/v_data.std()
+    v_var = v_var + v_data.std().pow(2)
+v_var = v_var/len(datas)
+mean_data = mean_data/len(datas)    
+
+for k,data in enumerate(datas):
+    data = data - mean_data -0.2
+    v_data = torch.diff(data,dim=0)
+    v_data = v_data/v_var.sqrt()
     new_datas = new_datas + (torch.cat((data[1:],v_data),dim=-1),)
 datas = new_datas
-
 
 # num_mixtures = 5
 # batch_shape = ()
@@ -79,8 +87,8 @@ datas = new_datas
 data = torch.cat(datas[0:3],dim=1).clone().detach()
 print('simulations complete')
 
-model = DMBD(obs_shape=data.shape[-2:],role_dims=(4,4,4),hidden_dims=(4,4,4),batch_shape=(),regression_dim = -1, control_dim=0)
-# model0 = DMBD(obs_shape=data.shape[-2:],role_dims=(20,0,0),hidden_dims=(10,0,0),batch_shape=(),regression_dim = -1, control_dim=0)
+model = DynamicMarkovBlanketDiscovery(obs_shape=data.shape[-2:],role_dims=(4,4,4),hidden_dims=(4,4,4),batch_shape=(),regression_dim = -1, control_dim=0)
+# model0 = DynamicMarkovBlanketDiscovery(obs_shape=data.shape[-2:],role_dims=(20,0,0),hidden_dims=(10,0,0),batch_shape=(),regression_dim = -1, control_dim=0)
 # model0.update(data,None,None,iters=2*iters,latent_iters=1,lr=0.5,verbose=True)
 # f = r"./cradle0.mp4"
 # ar = animate_results('role',f, xlim = (-1.5,1.5), ylim = (-0.2,1.2), fps=10)
@@ -98,7 +106,7 @@ t = time.time()
 print(time.time()-t)
 
 for i in range(iters):
-    model.update(data,None,None,iters=1,latent_iters=1,lr=0.5,verbose=True)
+    model.update(data,None,None,iters=1,latent_iters=1,lr=1,verbose=True)
 
 #    batch_num = torch.randint(0,data.shape[1],(1,)).item()
     sbz=model.px.mean()
@@ -121,9 +129,9 @@ for i in range(iters):
     p2=model.obs_model.p[:,batch_num,:,list(range(r1,r2))].mean(-2)
     p3=model.obs_model.p[:,batch_num,:,list(range(r2,r3))].mean(-2)
 
-    plt.scatter(roles[:,batch_num,list(range(0,r1)),0],roles[:,batch_num,list(range(0,r1)),1],color='r',alpha=0.25)
-    plt.scatter(roles[:,batch_num,list(range(r1,r2)),0],roles[:,batch_num,list(range(r1,r2)),1],color='g',alpha=0.25)
-    plt.scatter(roles[:,batch_num,list(range(r2,r3)),0],roles[:,batch_num,list(range(r2,r3)),1],color='b',alpha=0.25)
+    plt.scatter(roles[:,batch_num,list(range(0,r1)),0].numpy(),roles[:,batch_num,list(range(0,r1)),1].numpy(),c='r',alpha=0.25)
+    plt.scatter(roles[:,batch_num,list(range(r1,r2)),0].numpy(),roles[:,batch_num,list(range(r1,r2)),1].numpy(),color='g',alpha=0.25)
+    plt.scatter(roles[:,batch_num,list(range(r2,r3)),0].numpy(),roles[:,batch_num,list(range(r2,r3)),1].numpy(),color='b',alpha=0.25)
     plt.xlim(xlim)
     plt.ylim(ylim)
     plt.show()
@@ -166,9 +174,9 @@ zz = zz/zz.std()
 
 fig, axs = plt.subplots(2, 1, sharex=True)
 
-axs[0].plot(ss[:,batch_num,-1:],'r',label='s')
-axs[0].plot(bb[:,batch_num,-1:],'g',label='b')
-axs[0].plot(zz[:,batch_num,-1:],'b',label='z')
+axs[0].plot(ss[:,batch_num,-1:].numpy(),'r',label='s')
+axs[0].plot(bb[:,batch_num,-1:].numpy(),'g',label='b')
+axs[0].plot(zz[:,batch_num,-1:].numpy(),'b',label='z')
 axs[0].set_title('Top PC Score')
 # handles, labels = axs[0].get_legend_handles_labels()
 # selected_handles = [handles[0], handles[2], handles[4]]
@@ -176,9 +184,9 @@ axs[0].set_title('Top PC Score')
 # axs[0].legend(selected_handles, selected_labels)
 axs[0].legend()
 
-axs[1].plot(p[:,batch_num,0],'r')
-axs[1].plot(p[:,batch_num,1],'g')
-axs[1].plot(p[:,batch_num,2],'b')
+axs[1].plot(p[:,batch_num,0].numpy(),'r')
+axs[1].plot(p[:,batch_num,1].numpy(),'g')
+axs[1].plot(p[:,batch_num,2].numpy(),'b')
 axs[1].set_title('Number of Assigned Objects')
 axs[1].set_xlabel('Time')
 #plt.savefig('C://Users/brain/Desktop/cradlePCs1.png')
@@ -192,4 +200,4 @@ ar = animate_results('sbz',f, xlim = xlim, ylim = ylim, fps=10)
 ar.make_movie(model, data, (0,20,40,60,80,100))#,120))#,60,61,80,81))
 
 batch_num = 40
-plt.scatter(data[:,batch_num,:,0],data[:,batch_num,:,1],cmap='rainbow_r',c=model.obs_model.p.argmax(-1)[:,batch_num,:])
+plt.scatter(data[:,batch_num,:,0].numpy(),data[:,batch_num,:,1].numpy(),cmap='rainbow_r',c=model.obs_model.p.argmax(-1)[:,batch_num,:].numpy())

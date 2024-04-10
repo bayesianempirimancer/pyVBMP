@@ -1,12 +1,15 @@
 import torch, torchvision
 from matplotlib import pyplot as plt
 import time
-from models.wip_BayesNet import *
-from models.dMixtureofLinearTransforms import dMixtureofLinearTransforms
-from models.MixtureofLinearTransforms import MixtureofLinearTransforms
-from models.NLRegression import NLRegression_full_rank
-from models.NLRegression import NLRegression_low_rank
-from models.wip_BayesianTransformers import *
+#from models.wip_BayesNet import *
+from transforms.dMixtureofLinearTransforms import dMixtureofLinearTransforms
+from transforms.MixtureofLinearTransforms import MixtureofLinearTransforms
+from transforms.NLRegression_full_rank import NLRegression_full_rank
+from transforms.NLRegression_low_rank import NLRegression_low_rank
+from transforms.MultiNomialLogisticRegression import MultiNomialLogisticRegression
+#from transforms.wip_FocusedBayesianTransformer import FocusedBayesianTransformer
+#from transforms.wip_GenerativeBayesianTransformer import GenerativeBayesianTransformer
+from dists.MultivariateNormal_vector_format import MultivariateNormal_vector_format
 
 batch_size_train=4000
 batch_size_test=1000
@@ -37,7 +40,7 @@ test = enumerate(test_loader)
 n=10
 p=16*16#784
 
-lr=0.1
+lr=0.5
 
 
 # X = torch.randn(num_samples,p)
@@ -53,9 +56,9 @@ lr=0.1
 
 hidden_dims = (p//4,)
 latent_dims = (32,)
-model = BayesNet(n,p,hidden_dims,latent_dims)
+#model = BayesNet(n,p,hidden_dims,latent_dims)
 
-iters = 50
+iters = 20
 #W_hat = MatrixNormalWishart(mu_0 = torch.zeros(n,p),pad_X=True)
 t=time.time()
 #m0.raw_update(X.unsqueeze(-1),Y.unsqueeze(-1))
@@ -64,6 +67,11 @@ test = enumerate(test_loader)
 batch_idx, (X, Y) = next(train)
 X = X.view(-1,p)
 Y = torch.eye(10)[Y]
+
+#X = X-X.mean(0)
+#Y = Y + 0.05*torch.randn(Y.shape)
+#X = X/X.std() + 0.05*torch.randn(X.shape)
+
 #X = torch.fft.fft2(X).abs().pow(2)
 #stdX = X.std()
 #muX = X.mean(0,True)
@@ -120,18 +128,26 @@ for i in range(10):
     plt.imshow(xhat[i].detach())
 plt.show()
 
-m1=dMixtureofLinearTransforms(n,p,mixture_dim=32,pad_X=True)
+
+m1=dMixtureofLinearTransforms(n,p,mixture_dim=10,pad_X=True,type='Gamma')
 t=time.time()
-m1.raw_update(X,Y,iters=iters,lr=0.5,verbose=True)
+m1.raw_update(X+torch.randn(X.shape)*0.05,Y+torch.randn(Y.shape)*0.05,iters=1,lr=0.5,verbose=True)
 t_dMix = time.time()-t
 pxhat = m1.postdict(torch.eye(10))[0]
-xhat = pxhat.mean().reshape(10,16,16)
+#xhat = pxhat.mean().reshape(10,16,16)
+
+xhat = m1.A.weights().reshape(10,10,16,16)
+
 Yhat = m1.predict(X)[0].mean().squeeze(-1)
 percent_correct_test = (Y.argmax(-1)==Yhat.argmax(-1)).float().mean()*100
 print('dMix percent correct test = ',percent_correct_test, 'in ', t_dMix,' seconds' )
+k=0
 for i in range(10):
-    plt.subplot(2,5,i+1)
-    plt.imshow(xhat[i].detach())
+#    plt.subplot(2,5,i+1)
+    for j in range(10):
+        plt.subplot(10,10,k+1)
+        plt.imshow(xhat[i,j].detach())
+        k=k+1
 plt.show()
 
 m2 = NLRegression_full_rank(n,p, mixture_dim=32)
@@ -142,7 +158,8 @@ Yhat = m2.predict(X)[0].mean().squeeze(-1)
 percent_correct_test = (Y.argmax(-1)==Yhat.argmax(-1)).float().mean()*100
 print('NL full rank percent correct test = ',percent_correct_test, 'in ', t_NL,' seconds' )
 
-m3 = NLRegression_low_rank(n,p,hidden_dim=p//2,mixture_dim=32)
+mixture_dim = 20
+m3 = NLRegression_low_rank(n,p,hidden_dim=p//2,mixture_dim=mixture_dim)
 t=time.time()
 m3.raw_update(X,Y,iters=iters,lr=0.5,verbose=True)
 t_NL_low = time.time()-t
@@ -150,7 +167,7 @@ Yhat = m3.predict(X)[0].mean().squeeze(-1)
 percent_correct_test = (Y.argmax(-1)==Yhat.argmax(-1)).float().mean()*100
 print('NL low rank percent correct test = ',percent_correct_test, 'in ', t_NL_low,' seconds' )
 
-m4 = MixtureofLinearTransforms(n,p,32,pad_X=True)
+m4 = MixtureofLinearTransforms(n,p,mixture_dim,pad_X=True)
 t=time.time()
 m4.raw_update(X.unsqueeze(-1),Y.unsqueeze(-1),iters=iters,lr=0.5,verbose=True)
 t_MixLin = time.time()-t
@@ -158,15 +175,20 @@ Yhat = m4.predict(X.unsqueeze(-1))[0].mean().squeeze(-1)
 percent_correct_test = (Y.argmax(-1)==Yhat.argmax(-1)).float().mean()*100
 print('MixLin low rank percent correct test = ',percent_correct_test, 'in ', t_MixLin,' seconds' )
 
-m5 = FocusedGenerativeBayesianTransformer(mixture_dim, role_dim, obs_dim, hidden_dim, batch_shape = (), pad_X=True)
-m6 = GenerativeBayesianTransformer(mixture_dim, role_dim, obs_dim, hidden_dim, batch_shape = (), pad_X=True)
+# mixture_dim = 32
+# role_dim = 1
+# obs_dim = 1
+# hidden_dim = 16
+
+# m5 = FocusedBayesianTransformer(mixture_dim, role_dim, obs_dim, hidden_dim, batch_shape = (), pad_X=True)
+# m6 = GenerativeBayesianTransformer(mixture_dim, role_dim, obs_dim, hidden_dim, batch_shape = (), pad_X=True)
 
 
 mua = m1.A.Elog_like_X(torch.eye(10).unsqueeze(-1).unsqueeze(-3))
 mua = (mua[0].inverse()@mua[1]).squeeze(-1)
 for i in range(10):
-    for j in range(20):
-      plt.subplot(20,10,i+10*j+1)
+    for j in range(10):
+      plt.subplot(10,10,i+10*j+1)
       plt.imshow(mua[i,j].reshape(16,16))
       plt.xticks([])
       plt.yticks([])
@@ -175,8 +197,8 @@ plt.show()
 mua = m2.A.Elog_like_X(torch.eye(10).unsqueeze(-1).unsqueeze(-3))
 mua = (mua[0].inverse()@mua[1]).squeeze(-1)
 for i in range(10):
-    for j in range(20):
-      plt.subplot(20,10,i+10*j+1)
+    for j in range(10):
+      plt.subplot(10,10,i+10*j+1)
       plt.imshow(mua[i,j].reshape(16,16))
       plt.xticks([])
       plt.yticks([])
@@ -185,8 +207,8 @@ plt.show()
 mua = m4.W.Elog_like_X(torch.eye(10).unsqueeze(-1).unsqueeze(-3))
 mua = (mua[0].inverse()@mua[1]).squeeze(-1)
 for i in range(10):
-    for j in range(20):
-      plt.subplot(20,10,i+10*j+1)
+    for j in range(10):
+      plt.subplot(10,10,i+10*j+1)
       plt.imshow(mua[i,j].reshape(16,16))
       plt.xticks([])
       plt.yticks([])

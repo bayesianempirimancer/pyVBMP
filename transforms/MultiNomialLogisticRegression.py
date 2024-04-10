@@ -51,6 +51,8 @@ class MultiNomialLogisticRegression():
         YmN = Y[...,:-1]-pgb/2.0   
         YmN = YmN.view(YmN.shape+ (1,1))
 
+        pgb = pgb.unsqueeze(-1).unsqueeze(-1)  # sample x batch x n x 1 x 1
+
         if self.pad_X is True:
             EX = torch.cat((X,torch.ones(X.shape[:-1]+(1,))),dim=-1)
         else:
@@ -65,15 +67,15 @@ class MultiNomialLogisticRegression():
             SEyx = ((YmN*EX)*p.view(p.shape+(1,1,1))).sum(sample_dims)
  
         for i in range(iters):
-            pgc = (self.beta.EXXT()*EXXT).sum(-1).sum(-1).sqrt()  # shape = (sample x batch x n)
-            Ew = (pgb/2.0/pgc*(pgc/2.0).tanh()).unsqueeze(-1).unsqueeze(-1) # expands to sample x batch x n x 1 x 1
+            pgc = (self.beta.EXXT()*EXXT).sum((-2,-1),True).sqrt()  # shape = (sample x batch x n x 1 x 1)
+            Ew = (pgb/2.0/pgc*(pgc/2.0).tanh())  # sample x batch x n x 1 x 1
             if p is None:
                 SExx =  (Ew*EXXT).sum(sample_dims)  # batch x n x p x p 
             else:
                 SExx = (Ew*EXXT*p.view(p.shape+(1,1,1))).sum(sample_dims)  # batch x n x p x p
             
             if verbose is True: 
-                ELBO = (SEyx*self.beta.mean()).sum((-3,-2,-1)) - (pgb*(0.5*pgc).cosh().log()).sum(sample_dims).sum(-1) - pgb.sum(sample_dims).sum(-1)*torch.log(torch.tensor(2,requires_grad=False)) - self.KLqprior()
+                ELBO = (SEyx*self.beta.mean()).sum((-3,-2,-1)) - (pgb*(0.5*pgc).cosh().log()).sum(sample_dims).sum((-3,-2,-1)) - pgb.sum(sample_dims).sum((-3,-2,-1))*torch.log(torch.tensor(2,requires_grad=False)) - self.KLqprior()
                 print("MNLR Percent Change in ELBO: ",((ELBO-self.ELBO_last)/self.ELBO_last.abs()*100))
                 self.ELBO_last = ELBO
 

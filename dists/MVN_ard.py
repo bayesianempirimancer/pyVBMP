@@ -47,7 +47,7 @@ class MVN_ard():
         self.batch_shape = self.batch_shape[:-n]
         return self
 
-    def ss_update(self, SExx, SEx, iters = 2, lr=1.0, beta=None):
+    def ss_update(self, SExx, SEx, iters = 1, lr=1.0, beta=None):
         if beta is not None:
             self.SExx = self.SExx*beta + SExx
             self.SEx = self.SEx*beta + SEx
@@ -55,14 +55,16 @@ class MVN_ard():
             SEx = self.SEx
 
         invSigmamu = SEx
-        invSigma =  SExx + self.alpha.mean()*torch.eye(self.dim,requires_grad=False) + 1e-6*torch.eye(self.dim,requires_grad=False)
+        invSigma =  SExx + self.alpha.mean()*torch.eye(self.dim,requires_grad=False) + 1e-4*torch.eye(self.dim,requires_grad=False)
+#        Sigma = torch.linalg.solve(invSigma,torch.eye(invSigma.shape[-1]))
         Sigma = invSigma.inverse()
         mu = Sigma@self.invSigmamu
         for i in range(iters):
             EXXT = Sigma.diagonal(dim1=-1,dim2=-2).unsqueeze(-1) + (mu**2)
-            self.alpha.ss_update(torch.tensor(0.5).expand(self.alpha.batch_shape+self.alpha.event_shape), 0.5*EXXT,lr=lr,beta=beta)
+            self.alpha.ss_update(torch.tensor(0.5).expand(self.alpha.batch_shape+self.alpha.event_shape), 0.5*EXXT,lr=1,beta=0)
             invSigma =  SExx + self.alpha.mean()*torch.eye(self.dim,requires_grad=False)
             Sigma = invSigma.inverse()
+#            Sigma = torch.linalg.solve(invSigma,torch.eye(invSigma.shape[-1]))
             mu = Sigma@invSigmamu
         
         self.invSigma = (1-lr)*self.invSigma + lr*invSigma
