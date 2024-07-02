@@ -80,9 +80,9 @@ class MultiNomialLogisticRegression():
             self.beta.ss_update(SExx,SEyx,lr=lr,beta=beta)
 
     def update(self,pX,pY,iters=2,p=None,lr=1,beta=None,verbose=False):  
-        sample_shape = pX.shape[:-self.event_dim-self.batch_dim+1]
+        sample_shape = pX.shape[:-self.event_dim-self.batch_dim]
         sample_dims = tuple(range(len(sample_shape)))
-        # Here pX is assumed to be a probability distribution that has supports EXXT()
+        # Here pX is assumed to be a probability distribution that supports EXXT()
         ELBO = self.ELBO_last
 
         pgb = pY.sum(-1,True)-(pY.cumsum(-1)-pY)[...,:-1]
@@ -105,7 +105,7 @@ class MultiNomialLogisticRegression():
 
         for i in range(iters):
             pgc = (self.beta.EXXT()*EXXT).sum(-1).sum(-1).sqrt()  # shape = (sample x batch x n)
-            Ew = pgb/2.0/pgc*(pgc/2.0).tanh().unsqueeze(-1).unsqueeze(-1)  # expands to sample x batch x n x 1 x 1
+            Ew = (pgb/2.0/pgc*(pgc/2.0).tanh()).unsqueeze(-1).unsqueeze(-1)  # expands to sample x batch x n x 1 x 1
             if p is None:
                 SExx =  (Ew*EXXT).sum(sample_dims)  # sample x batch x n x p x p 
             else:

@@ -10,7 +10,7 @@ class dMixtureofLinearTransforms():
     # z ~ p(z|x) which is MNLR.  Component number give the number of different z's, latent_dim gives the dimension of x, and obs_dim gives the dimension
     # of y.  
     
-    def __init__(self, n, p, mixture_dim, batch_shape=(),pad_X=True, type = 'Wishart'):
+    def __init__(self, n, p, mixture_dim, batch_shape=(),pad_X=True, type = 'Wishart', fixed_precision = False):
         self.event_shape = (mixture_dim,n,p)
         self.batch_shape = batch_shape
         self.batch_dim = len(batch_shape)
@@ -23,10 +23,10 @@ class dMixtureofLinearTransforms():
         scale = 1.0/mixture_dim**(1.0/n)
         if type == 'Wishart':
             self.A = MatrixNormalWishart(event_shape = (n,p), batch_shape = batch_shape + (mixture_dim,), 
-                                         scale = scale, pad_X=pad_X)
+                                         scale = scale, pad_X=pad_X, fixed_precision = fixed_precision)
         elif type == 'Gamma':
             self.A = MatrixNormalGamma(event_shape = (n,p), batch_shape = batch_shape + (mixture_dim,), 
-                                         scale = scale, pad_X=pad_X)
+                                         scale = scale, pad_X=pad_X,fixed_precision=fixed_precision)
         elif type == 'MVN_ard':
             raise NotImplementedError
         else:
@@ -100,8 +100,8 @@ class dMixtureofLinearTransforms():
         return MultivariateNormal_vector_format(mu = mu, Sigma = Sigma), p
 
     def update(self,pX,pY,p=None,iters=1,lr=1.0,verbose=False):
-        # Expects X and Y to be batch consistent, i.e. X is sample x batch x p
-        #                                              Y is sample x batch x n
+        # Expects X and Y to be batch consistent, i.e. X is sample x batch x p,1
+        #                                              Y is sample x batch x n,1
         pAX = pX.unsqueeze(-3)
         pAY = pY.unsqueeze(-3)
         for i in range(iters):
@@ -126,7 +126,7 @@ class dMixtureofLinearTransforms():
 
     def forward(self,pX):
         p = self.pi.forward(pX)        
-        pY = self.A.forward(pX.unsqueeze(-3))
+        pY = self.A.forward(pX.unsqueeze(-3))[0]
         mu = (pY.mean()*p.view(p.shape+(1,1))).sum(-3)
         Sigma = (pY.EXXT()*p.view(p.shape+(1,1))).sum(-3)-mu@mu.transpose(-2,-1)
         return MultivariateNormal_vector_format(Sigma = Sigma, mu = mu)
